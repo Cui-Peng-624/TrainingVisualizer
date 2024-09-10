@@ -3,7 +3,7 @@ from matplotlib.ticker import MaxNLocator
 from IPython import display
 
 class TrainingVisualizer:
-    """在动画中绘制数据并记录最高的acc和最低的loss"""
+    """在动画中绘制数据并记录每个类别的最高acc和最低loss"""
     def __init__(self, xlabel=None, ylabel=None, title=None, legend=None, xlim=None,
                  ylim=None, xscale='linear', yscale='linear',
                  fmts=('-', 'm--', 'g-.', 'r:'), nrows=1, ncols=1,
@@ -19,9 +19,9 @@ class TrainingVisualizer:
         self.legend = legend
         self.title = title  # 保存标题
 
-        # 新增：记录最高acc和最低loss
-        self.best_acc = float('-inf')  # 初始化为负无穷
-        self.min_loss = float('inf')   # 初始化为正无穷
+        # 新增：记录每个类别的最高acc和最低loss
+        self.best_acc = {key: float('-inf') for key in legend if 'acc' in key.lower()}
+        self.min_loss = {key: float('inf') for key in legend if 'loss' in key.lower()}
 
     def set_axes(self, ax, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
         """设置matplotlib的轴"""
@@ -53,24 +53,28 @@ class TrainingVisualizer:
                 self.X[i].append(a)
                 self.Y[i].append(b)
 
-                # 更新最高acc和最低loss
-                if self.legend[i].lower().find('acc') != -1:  # 检查是否是acc数据
-                    if b > self.best_acc:
-                        self.best_acc = b
-                if self.legend[i].lower().find('loss') != -1:  # 检查是否是loss数据
-                    if b < self.min_loss:
-                        self.min_loss = b
+                # 更新每个类别的最高acc和最低loss
+                label = self.legend[i].lower()
+                if 'acc' in label:  # 检查是否是acc数据
+                    if b > self.best_acc[self.legend[i]]:
+                        self.best_acc[self.legend[i]] = b
+                if 'loss' in label:  # 检查是否是loss数据
+                    if b < self.min_loss[self.legend[i]]:
+                        self.min_loss[self.legend[i]] = b
 
         self.axes[0].cla()
         for x, y, fmt in zip(self.X, self.Y, self.fmts):
             self.axes[0].plot(x, y, fmt)
         self.config_axes()
 
-        # 显示最高acc和最低loss
-        if self.title:
-            self.axes[0].set_title(self.title + f"\nBest Acc: {self.best_acc:.4f}, Min Loss: {self.min_loss:.4f}")
-        else:
-            self.axes[0].set_title(f"Best Acc: {self.best_acc:.4f}, Min Loss: {self.min_loss:.4f}")
+        # 显示每个类别的最高acc和最低loss
+        title_text = self.title if self.title else ""
+        for key in self.best_acc:
+            title_text += f"\nBest {key}: {self.best_acc[key]:.4f}"
+        for key in self.min_loss:
+            title_text += f"\nMin {key}: {self.min_loss[key]:.4f}"
+        
+        self.axes[0].set_title(title_text)
         
         display.display(self.fig)
         display.clear_output(wait=True)
@@ -81,3 +85,4 @@ class TrainingVisualizer:
 #     train_acc, train_loss = 
 #     val_acc, val_loss = 
 #     visualizer.add(epoch, [train_loss, train_acc, val_loss, val_acc])
+
